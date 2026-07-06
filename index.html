@@ -1,1 +1,182 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LEON SETTER VISIÓN</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;LEON SETTER VISIÓN&quot;,&quot;short_name&quot;:&quot;LSV&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#000000&quot;,&quot;theme_color&quot;:&quot;#000000&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;}]}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-black text-white p-3 max-w-md mx-auto">
+  <div id="root"></div>
+  <script type="text/babel">
+    const {useState,useEffect}=React;
+
+    function App(){
+      const [pantalla,setPantalla]=useState('inicio');
+      const [jugadas,setJugadas]=useState([]);
+      const [jugadaActual,setJugadaActual]=useState({
+        id:null,
+        rotacion:'',
+        tipo:'',
+        resultado:'',
+        zona:'',
+        bloque:'',
+        error:'',
+        nota:''
+      });
+      const [filtros,setFiltros]=useState({rotacion:'',tipo:'',resultado:''});
+
+      useEffect(()=>{
+        const guardadas=localStorage.getItem('jugadasLSV');
+        if(guardadas) setJugadas(JSON.parse(guardadas));
+      },[]);
+
+      useEffect(()=>{
+        localStorage.setItem('jugadasLSV',JSON.stringify(jugadas));
+      },[jugadas]);
+
+      const guardarJugada=()=>{
+        if(!jugadaActual.rotacion||!jugadaActual.tipo){
+          alert('Rotación y Tipo son obligatorios');
+          return;
+        }
+        const nueva={...jugadaActual,id:Date.now()};
+        setJugadas([nueva,...jugadas]);
+        setJugadaActual({id:null,rotacion:'',tipo:'',resultado:'',zona:'',bloque:'',error:'',nota:''});
+        setPantalla('inicio');
+      };
+
+      const borrarJugada=(id)=>{
+        setJugadas(jugadas.filter(j=>j.id!==id));
+      };
+
+      const exportarCSV=()=>{
+        const headers='Rotacion,Tipo,Resultado,Zona,Bloque,Error,Nota\n';
+        const filas=jugadas.map(j=>`${j.rotacion},${j.tipo},${j.resultado},${j.zona},${j.bloque},${j.error},${j.nota}`).join('\n');
+        const blob=new Blob([headers+filas],{type:'text/csv'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        a.download='jugadas_leon_setter.csv';
+        a.click();
+      };
+
+      const jugadasFiltradas=jugadas.filter(j=>{
+        return(!filtros.rotacion||j.rotacion===filtros.rotacion)&&
+              (!filtros.tipo||j.tipo===filtros.tipo)&&
+              (!filtros.resultado||j.resultado===filtros.resultado);
+      });
+
+      const stats={
+        total:jugadasFiltradas.length,
+        puntos:jugadasFiltradas.filter(j=>j.resultado==='Punto').length,
+        errores:jugadasFiltradas.filter(j=>j.resultado==='Error').length
+      };
+      stats.efectividad=stats.total?((stats.puntos-stats.errores)/stats.total*100).toFixed(1):0;
+
+      if(pantalla==='nueva') return(
+        <div>
+          <header className="text-center mb-4">
+            <h1 className="text-2xl font-black">NUEVA JUGADA</h1>
+            <button onClick={()=>setPantalla('inicio')} className="text-yellow-400 text-sm">← Volver</button>
+          </header>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <select value={jugadaActual.rotacion} onChange={e=>setJugadaActual({...jugadaActual,rotacion:e.target.value})} className="bg-gray-800 p-3 rounded">
+              <option value="">Rotación*</option>
+              <option>R1</option><option>R2</option><option>R3</option>
+              <option>R4</option><option>R5</option><option>R6</option>
+            </select>
+            <select value={jugadaActual.tipo} onChange={e=>setJugadaActual({...jugadaActual,tipo:e.target.value})} className="bg-gray-800 p-3 rounded">
+              <option value="">Tipo*</option>
+              <option>Quick</option><option>Alta</option><option>Tensa</option>
+              <option>Pipe</option><option>D</option><option>Slide</option>
+            </select>
+            <select value={jugadaActual.resultado} onChange={e=>setJugadaActual({...jugadaActual,resultado:e.target.value})} className="bg-gray-800 p-3 rounded">
+              <option value="">Resultado</option>
+              <option>Punto</option><option>Error</option><option>Continuó</option>
+            </select>
+            <select value={jugadaActual.zona} onChange={e=>setJugadaActual({...jugadaActual,zona:e.target.value})} className="bg-gray-800 p-3 rounded">
+              <option value="">Zona</option>
+              <option>1</option><option>2</option><option>3</option>
+              <option>4</option><option>5</option><option>6</option>
+            </select>
+            <select value={jugadaActual.bloque} onChange={e=>setJugadaActual({...jugadaActual,bloque:e.target.value})} className="bg-gray-800 p-3 rounded">
+              <option value="">Bloque</option>
+              <option>0</option><option>1</option><option>2</option><option>3</option>
+            </select>
+            <input value={jugadaActual.error} onChange={e=>setJugadaActual({...jugadaActual,error:e.target.value})} placeholder="Error/Nota" className="bg-gray-800 p-3 rounded"/>
+          </div>
+          <textarea value={jugadaActual.nota} onChange={e=>setJugadaActual({...jugadaActual,nota:e.target.value})} placeholder="Nota detallada..." className="w-full bg-gray-800 p-3 rounded mb-3 h-20"/>
+          <button onClick={guardarJugada} className="w-full bg-yellow-500 text-black font-black p-4 rounded">GUARDAR JUGADA</button>
+        </div>
+      );
+
+      if(pantalla==='historial') return(
+        <div>
+          <header className="text-center mb-4">
+            <h1 className="text-2xl font-black">HISTORIAL</h1>
+            <button onClick={()=>setPantalla('inicio')} className="text-yellow-400 text-sm">← Volver</button>
+          </header>
+          <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
+            <select value={filtros.rotacion} onChange={e=>setFiltros({...filtros,rotacion:e.target.value})} className="bg-gray-800 p-2 rounded">
+              <option value="">Rotación: Todas</option>
+              <option>R1</option><option>R2</option><option>R3</option>
+              <option>R4</option><option>R5</option><option>R6</option>
+            </select>
+            <select value={filtros.tipo} onChange={e=>setFiltros({...filtros,tipo:e.target.value})} className="bg-gray-800 p-2 rounded">
+              <option value="">Tipo: Todos</option>
+              <option>Quick</option><option>Alta</option><option>Tensa</option>
+            </select>
+            <button onClick={exportarCSV} className="bg-green-600 p-2 rounded font-bold">CSV</button>
+          </div>
+          <div className="bg-gray-900 p-3 rounded mb-3 text-center">
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div><div className="text-gray-400">Total</div><div className="text-xl font-bold">{stats.total}</div></div>
+              <div><div className="text-gray-400">Efect%</div><div className="text-xl font-bold text-yellow-400">{stats.efectividad}%</div></div>
+              <div><div className="text-gray-400">Puntos</div><div className="text-xl font-bold text-green-400">{stats.puntos}</div></div>
+            </div>
+          </div>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {jugadasFiltradas.map(j=>(
+              <div key={j.id} className="bg-gray-800 p-3 rounded text-sm">
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold">{j.rotacion} - {j.tipo}</span>
+                  <span className={j.resultado==='Punto'?'text-green-400':j.resultado==='Error'?'text-red-400':'text-gray-400'}>{j.resultado||'S/R'}</span>
+                </div>
+                <div className="text-xs text-gray-400">Zona:{j.zona} Bloque:{j.bloque} {j.nota}</div>
+                <button onClick={()=>borrarJugada(j.id)} className="text-red-500 text-xs mt-1">Borrar</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      return(
+        <div>
+          <header className="text-center mb-4">
+            <h1 className="text-2xl font-black">JUA VOLLEYBALL</h1>
+            <h2 className="text-lg font-bold text-yellow-400">LEON SETTER VISIÓN</h2>
+            <p className="text-xs text-gray-400">By Coach Juanito - Análisis de Setters</p>
+          </header>
+          <button onClick={()=>setPantalla('nueva')} className="w-full bg-yellow-500 text-black font-black p-5 rounded mb-3 text-lg">+ NUEVA JUGADA</button>
+          <button onClick={()=>setPantalla('historial')} className="w-full bg-gray-800 p-4 rounded mb-3">📊 VER HISTORIAL ({jugadas.length})</button>
+          <div className="bg-gray-900 p-3 rounded text-xs text-gray-400">
+            <p>• Guarda jugadas por rotación y tipo</p>
+            <p>• Calcula efectividad automática</p>
+            <p>• Exporta a CSV para Excel</p>
+            <p>• Funciona offline en tu celular</p>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App/>,document.getElementById('root'));
+  </script>
+</body>
+</html>
